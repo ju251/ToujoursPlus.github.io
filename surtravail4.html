@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toujours plus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Dirt&family=Lexend:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#34344a;--txt:#bfc0c0;--muted:#aea4bf;--dim:#5e5e78;--acc:#f75c03;--bdr:#44445a}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Lexend',sans-serif}
+
+/* ══════════════════════════════════════════════
+   PAGE D'ACCUEIL
+══════════════════════════════════════════════ */
+#splash{
+  position:fixed;inset:0;
+  z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  /* semi-transparent — laisse voir le design en dessous */
+  background:rgba(52,52,74,0.72);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+  transition:opacity 0.7s ease;
+}
+#splash.hidden{
+  opacity:0;
+  pointer-events:none;
+}
+.splash-btn{
+  font-family:'Lexend',sans-serif;
+  font-weight:300;
+  font-size:15px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--txt);
+  background:transparent;
+  border:0.5px solid rgba(191,192,192,0.4);
+  border-radius:3px;
+  padding:14px 36px;
+  cursor:pointer;
+  transition:background 0.18s, border-color 0.18s, color 0.18s;
+}
+.splash-btn:hover{
+  background:rgba(191,192,192,0.08);
+  border-color:rgba(191,192,192,0.7);
+}
+.splash-btn:active{transform:scale(0.98)}
+
+/* ══════════════════════════════════════════════
+   GRILLE PRINCIPALE — taille fixe, marges auto
+══════════════════════════════════════════════ */
+#app{
+  --vid-w: 760px;
+  --vid-h: 513px;   /* ratio exact 1598:1080 → 760 × (1080/1598) = 513 */
+  --left-w: 200px;
+  --gap: 14px;
+
+  display:grid;
+  grid-template-columns: var(--left-w) var(--vid-w);
+  grid-template-rows: auto var(--vid-h);
+  gap: var(--gap);
+
+  /* taille fixe, centré */
+  width: calc(var(--left-w) + var(--gap) + var(--vid-w));
+  margin: 0 auto;
+  /* centrage vertical : padding-top = espace restant / 2 */
+  padding-top: max(16px, calc((100vh - var(--vid-h) - var(--vid-h) - var(--gap) - 80px) / 2));
+  padding-bottom: 16px;
+}
+
+/* ── Haut gauche : mois + année horizontaux ── */
+#cell-month{
+  display:flex;flex-direction:column;
+  justify-content:flex-end;
+  padding-bottom:6px;padding-left:4px;
+}
+.month-h{
+  font-family:'Rubik Dirt',system-ui;
+  font-size:44px;color:var(--muted);
+  line-height:1;white-space:nowrap;
+}
+.year-h{
+  font-family:'Lexend',sans-serif;font-weight:200;
+  font-size:15px;color:var(--dim);margin-top:4px;
+}
+
+/* ── Haut droite : vidéo taille fixe exacte ── */
+#cell-video{
+  position:relative;
+  width:var(--vid-w);height:var(--vid-h);
+  background:#10101e;
+  border-radius:3px;border:.5px solid var(--bdr);overflow:hidden;
+  flex-shrink:0;
+}
+#cell-video video{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  /* contain pour ne pas couper : affiche la vidéo entière */
+  object-fit:contain;
+  display:none;
+}
+#cell-video video.active{display:block}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:10}
+#no-video{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:8px;color:var(--dim);z-index:6;
+}
+#no-video span{font-size:11px;font-weight:300;letter-spacing:.06em}
+
+/* ── Bas gauche : À faire ── */
+#cell-todo{
+  display:flex;flex-direction:column;
+  border:.5px solid var(--bdr);border-radius:10px;
+  padding:12px;overflow:hidden;
+  height:var(--vid-h);
+}
+.todo-title{font-family:'Lexend',sans-serif;font-weight:300;font-size:15px;color:var(--muted);letter-spacing:.04em}
+.todo-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-shrink:0}
+.btn-add{
+  width:18px;height:18px;
+  border:.5px solid var(--acc);border-radius:2px;
+  background:transparent;color:var(--acc);
+  font-size:17px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  padding-bottom:2px;transition:background .12s;flex-shrink:0;
+}
+.btn-add:hover{background:rgba(247,92,3,.14)}
+.btn-add:active{transform:scale(.94)}
+.task-list{display:flex;flex-direction:column;overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent}
+.task-list::-webkit-scrollbar{width:2px}
+.task-list::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:1px}
+.task-item{
+  display:flex;align-items:flex-start;gap:7px;
+  padding:6px 0;border-bottom:.5px solid rgba(68,68,90,.5);
+  cursor:pointer;font-size:11px;font-weight:300;color:var(--txt);
+  user-select:none;transition:opacity .4s;flex-shrink:0;
+}
+.task-item:last-child{border-bottom:none}
+.task-item.completing{pointer-events:none;opacity:.3}
+.task-item.completing .task-name{text-decoration:line-through;color:var(--dim)}
+.task-chk{
+  width:12px;height:12px;border-radius:2px;
+  border:.5px solid var(--dim);background:var(--bg);
+  flex-shrink:0;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,border-color .15s;
+}
+.task-chk.checked{background:var(--acc);border-color:var(--acc)}
+.task-chk.checked svg{display:block}
+.task-chk svg{display:none;width:7px;height:7px}
+.task-inner{flex:1;min-width:0}
+.task-name{line-height:1.3;word-break:break-word}
+.task-day{font-size:9px;color:var(--dim);margin-top:2px;display:flex;align-items:center;gap:3px}
+.day-pip{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.empty-t{font-size:11px;color:var(--dim);font-style:italic;padding:5px 0;font-weight:300}
+.elog{font-size:9px;font-weight:300;color:var(--dim);font-style:italic;line-height:1.5;border-top:.5px solid var(--bdr);padding-top:6px;margin-top:6px;min-height:14px;flex-shrink:0}
+
+/* ── Bas droite : calendrier — même taille que vidéo ── */
+#cell-cal{
+  display:flex;flex-direction:column;
+  width:var(--vid-w);height:var(--vid-h);overflow:hidden;
+}
+.cal-hdrs{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:.5px solid var(--bdr);flex-shrink:0}
+.cal-hdr{font-size:9px;font-weight:300;color:var(--muted);padding:4px 5px;letter-spacing:.04em}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(5,1fr);flex:1;min-height:0}
+.cal-cell{
+  position:relative;
+  padding:5px 5px 6px;
+  border-left:.5px solid var(--bdr);
+  overflow:visible;
+}
+.cal-cell:nth-child(7n+1){border-left:none}
+.cal-cell.empty{border-left:none;padding:0}
+
+/* Numéro de date — dans le coin haut gauche */
+.cal-num{
+  font-family:'Rubik Dirt',system-ui;
+  font-size:22px;color:var(--dim);line-height:1;
+  position:relative;z-index:2;
+}
+.cal-cell.today .cal-num{color:var(--txt);text-decoration:underline;text-underline-offset:2px}
+
+/* Déco — centrée sur le numéro, pas sur la case entière */
+.cal-deco{
+  position:absolute;
+  /* se positionne par rapport au coin haut gauche du numéro */
+  top:5px;    /* même que padding-top de .cal-cell */
+  left:5px;   /* même que padding-left */
+  /* taille : couvre le numéro avec une marge organique */
+  width:54px;
+  height:54px;
+  z-index:0;pointer-events:none;
+}
+.cal-deco img{width:100%;height:100%;object-fit:contain}
+</style>
+</head>
+<body>
+
+<!-- ══ PAGE D'ACCUEIL ══════════════════════════════════════════ -->
+<div id="splash">
+  <button class="splash-btn" id="btn-start">commencer l'expérience</button>
+</div>
+
+<!-- ══ INTERFACE PRINCIPALE ══════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Haut gauche : mois + année -->
+  <div id="cell-month">
+    <div class="month-h" id="mv"></div>
+    <div class="year-h"  id="yv"></div>
+  </div>
+
+  <!-- Haut droite : vidéo -->
+  <div id="cell-video">
+    <video id="vid-a" loop playsinline></video>
+    <video id="vid-b" loop playsinline></video>
+    <div id="flash"></div>
+    <div id="no-video">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5e5e78" stroke-width="1">
+        <rect x="2" y="6" width="20" height="12" rx="2"/>
+        <path d="M8 6V4M16 6V4M2 10h20"/>
+      </svg>
+      <span>Aucun clip chargé</span>
+    </div>
+  </div>
+
+  <!-- Bas gauche : À faire -->
+  <div id="cell-todo">
+    <div class="todo-hdr">
+      <span class="todo-title">À faire</span>
+      <button class="btn-add" id="btn-add">+</button>
+    </div>
+    <div class="task-list" id="task-list"></div>
+    <div class="elog" id="elog"></div>
+  </div>
+
+  <!-- Bas droite : calendrier -->
+  <div id="cell-cal">
+    <div class="cal-hdrs" id="cal-hdrs"></div>
+    <div class="cal-grid"  id="cal-grid"></div>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   VIDEO_CONFIG — MODIFIEZ CETTE SECTION DANS N'IMPORTE QUEL ÉDITEUR
+   ════════════════════════════════════════════════════════════════════
+   Un seul clip par état, en boucle infinie.
+   La transition reprend exactement au même timestamp dans la vidéo.
+
+   Seuils de changement d'état (nombre de tâches) :
+     Sérénité     : 0–1 tâche
+     Pression     : 2–3 tâches
+     Surcharge    : 4–5 tâches
+     Effondrement : 6 tâches et plus
+
+   Chemins relatifs à ce fichier HTML, ou absolus.
+   Exemple : "clips/serenite.mp4"
+═══════════════════════════════════════════════════════════════════ */
+
+const VIDEO_CONFIG = {
+  serenite:     "assets/serenite.mp4",   // Clip Sérénité     (0–1 tâche)
+  pression:     "assets/pression.mp4",   // Clip Pression     (2–3 tâches)
+  surcharge:    "assets/surcharge2.mp4",   // Clip Surcharge    (4–5 tâches)
+  effondrement: "assets/effondrement.mp4",   // Clip Effondrement (6+ tâches)
+};
+
+const SFX_CONFIG = {
+  ajout_tache:     "assets/universfield-computer-mouse-click-352734.mp3",   // Son ajout de tâche
+  changement_etat: "assets/oxidvideos-old-camera-shutter-183213.mp3",   // Son changement d'état (pitch baisse à chaque état)
+};
+
+/* ════════════════════════════════════════════════════════════════ */
+
+const THRESHOLDS   = [0, 2, 4, 6];
+const PITCH        = [1.0, 0.80, 0.62, 0.46];
+const TASK_LABELS  = [
+  "Réunion d'équipe","Rapport urgent","Présentation client","Audit interne",
+  "Formation obligatoire","Révision budgétaire","Compte-rendu hebdo",
+  "Appel conférence","Mise à jour RH","Plan stratégique","Dossier juridique","Revue de projet",
+];
+const JOURS   = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+const JOURS_C = ["dim","lun","mar","mer","jeu","ven","sam"];
+const MOIS_N  = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+const NOW = new Date(), AN = NOW.getFullYear(), MI = NOW.getMonth(), AUJ = NOW.getDate();
+const DIM = new Date(AN, MI+1, 0).getDate(), PREM = new Date(AN, MI, 1).getDay();
+
+let workload = 0, tasks = [], currentState = -1, activeVid = 'a';
+let audioCtx = null, sfxTaskBuf = null, sfxStateBuf = null;
+const VOL_V = 0.80, VOL_S = 0.70;
+
+const vidA   = document.getElementById('vid-a');
+const vidB   = document.getElementById('vid-b');
+const flash  = document.getElementById('flash');
+const noVid  = document.getElementById('no-video');
+const logEl  = document.getElementById('elog');
+const calEl  = document.getElementById('cal-grid');
+const listEl = document.getElementById('task-list');
+const splash = document.getElementById('splash');
+
+const actEl   = () => activeVid === 'a' ? vidA : vidB;
+const inactEl = () => activeVid === 'a' ? vidB : vidA;
+
+/* ── Audio ── */
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+async function loadBuf(url) {
+  initAudio();
+  const r = await fetch(url); const a = await r.arrayBuffer();
+  return audioCtx.decodeAudioData(a);
+}
+function playBuf(buf, pitch) {
+  if (!buf || !audioCtx) return;
+  const s = audioCtx.createBufferSource(); s.buffer = buf; s.playbackRate.value = pitch;
+  const g = audioCtx.createGain(); g.gain.value = VOL_S;
+  s.connect(g); g.connect(audioCtx.destination); s.start();
+}
+if (SFX_CONFIG.ajout_tache)     loadBuf(SFX_CONFIG.ajout_tache).then(b => sfxTaskBuf = b).catch(() => {});
+if (SFX_CONFIG.changement_etat) loadBuf(SFX_CONFIG.changement_etat).then(b => sfxStateBuf = b).catch(() => {});
+
+/* ── Vidéo ── */
+function stateForWorkload(w) {
+  let s = 0; THRESHOLDS.forEach((t, i) => { if (w >= t) s = i; }); return s;
+}
+function getClipUrl(si) {
+  return VIDEO_CONFIG[['serenite','pression','surcharge','effondrement'][si]] || null;
+}
+function doFlash(cb) {
+  flash.style.transition = 'none'; flash.style.opacity = '1';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    flash.style.transition = 'opacity 0.22s ease'; flash.style.opacity = '0';
+    cb && cb();
+  }));
+}
+function switchToState(newState) {
+  const url = getClipUrl(newState); if (!url) { currentState = newState; return; }
+  const out = actEl(), inc = inactEl();
+  const ts = (out.src && !out.paused) ? out.currentTime : 0;
+  inc.src = url; inc.volume = VOL_V; inc.load();
+  inc.addEventListener('canplay', function h() {
+    inc.removeEventListener('canplay', h);
+    inc.currentTime = ts % (inc.duration || 1);
+    doFlash(() => {
+      out.pause(); out.src = ''; out.classList.remove('active');
+      inc.classList.add('active'); inc.play().catch(() => {});
+      activeVid = activeVid === 'a' ? 'b' : 'a';
+      noVid.style.display = 'none';
+    });
+  }, { once: true });
+  playBuf(sfxStateBuf, PITCH[newState] || 1.0);
+  currentState = newState;
+}
+function startPlayback() {
+  const state = stateForWorkload(workload);
+  const url = getClipUrl(state); if (!url) return;
+  const vid = actEl();
+  vid.src = url; vid.volume = VOL_V; vid.load();
+  vid.addEventListener('canplay', function h() {
+    vid.removeEventListener('canplay', h);
+    vid.classList.add('active'); vid.play().catch(() => {});
+    noVid.style.display = 'none';
+  }, { once: true });
+  currentState = state;
+}
+function updateVideoState() {
+  const target = stateForWorkload(workload); if (target === currentState) return;
+  const msgs = ['Sérénité retrouvée.','Pression réduite.','Un peu de répit.','Effondrement.','Surcharge.','Pression.'];
+  logEl.textContent = target > currentState
+    ? ['','Pression.','Surcharge.','Effondrement.'][target]
+    : ['Sérénité retrouvée.','Pression réduite.','Un peu de répit.'][target];
+  switchToState(target);
+}
+
+/* ── Page d'accueil ── */
+document.getElementById('btn-start').addEventListener('click', () => {
+  initAudio();
+  splash.classList.add('hidden');
+  // Démarrer le clip Sérénité immédiatement
+  startPlayback();
+});
+
+/* ── Déco calendrier ── */
+function decoSVG(color, seed) {
+  const f = color === '#f75c03'
+    ? (seed % 2 ? 'assets/deco-24.svg' : 'assets/deco-08.svg')
+    : (seed % 2 ? 'assets/deco-10.svg' : 'assets/deco-26.svg');
+  return `<img src="${f}" alt="">`;
+}
+
+/* ── Calendrier ── */
+function buildCal() {
+  document.getElementById('mv').textContent = MOIS_N[MI];
+  document.getElementById('yv').textContent = AN;
+  const hdr = document.getElementById('cal-hdrs'); hdr.innerHTML = '';
+  JOURS.forEach(j => { const d = document.createElement('div'); d.className = 'cal-hdr'; d.textContent = j; hdr.appendChild(d); });
+  calEl.innerHTML = '';
+  for (let b = 0; b < PREM; b++) { const e = document.createElement('div'); e.className = 'cal-cell empty'; calEl.appendChild(e); }
+  for (let d = 1; d <= DIM; d++) {
+    const c = document.createElement('div'); c.className = 'cal-cell' + (d === AUJ ? ' today' : ''); c.id = 'd' + d;
+    const n = document.createElement('div'); n.className = 'cal-num'; n.textContent = String(d).padStart(2, '0');
+    c.appendChild(n); calEl.appendChild(c);
+  }
+}
+function updateCal() {
+  for (let d = 1; d <= DIM; d++) {
+    const c = document.getElementById('d' + d); if (!c) continue;
+    const old = c.querySelector('.cal-deco'); if (old) old.remove();
+    const dt = tasks.filter(t => t.day === d);
+    if (dt.length > 0) {
+      const color = dt[0].pip === 'orange' ? '#f75c03' : '#f0f757';
+      const w = document.createElement('div'); w.className = 'cal-deco';
+      w.innerHTML = decoSVG(color, d * 17 + MI * 7);
+      c.insertBefore(w, c.firstChild);
+    }
+  }
+}
+
+/* ── Tâches ── */
+function renderTasks() {
+  listEl.innerHTML = '';
+  if (!tasks.length) { const e = document.createElement('div'); e.className = 'empty-t'; e.textContent = 'Aucune tâche.'; listEl.appendChild(e); return; }
+  tasks.forEach((t, i) => {
+    const pip = t.pip === 'orange' ? '#f75c03' : '#f0f757';
+    const dw = JOURS_C[new Date(AN, MI, t.day).getDay()];
+    const el = document.createElement('div'); el.className = 'task-item';
+    el.innerHTML = `<div class="task-chk"><svg viewBox="0 0 10 8" fill="none"><polyline points="1,4 4,7 9,1" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="task-inner"><div class="task-name">${t.name}</div><div class="task-day"><span class="day-pip" style="background:${pip}"></span>${dw} ${t.day}</div></div>`;
+    el.addEventListener('click', () => completeTask(i, el));
+    listEl.appendChild(el);
+  });
+}
+function completeTask(idx, el) {
+  if (el.classList.contains('completing')) return;
+  el.querySelector('.task-chk').classList.add('checked');
+  el.classList.add('completing');
+  setTimeout(() => { tasks.splice(idx, 1); workload--; updateCal(); renderTasks(); updateVideoState(); }, 900);
+}
+function addTask() {
+  if (workload >= 12) { logEl.textContent = 'Charge maximale atteinte.'; return; }
+  initAudio(); playBuf(sfxTaskBuf, 1.0);
+  tasks.push({ name: TASK_LABELS[Math.floor(Math.random() * TASK_LABELS.length)], day: Math.floor(Math.random() * DIM) + 1, pip: Math.random() < 0.5 ? 'orange' : 'yellow' });
+  workload++; updateCal(); renderTasks(); updateVideoState();
+}
+document.getElementById('btn-add').addEventListener('click', () => { initAudio(); addTask(); });
+
+buildCal(); renderTasks();
+</script>
+</body>
+</html>
